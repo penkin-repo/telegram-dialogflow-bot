@@ -1,27 +1,22 @@
-import os
-import telebot
-from google.cloud import dialogflow
+name: Telegram Bot
+on:
+  schedule:
+    - cron: '*/5 * * * *'  # Запускать каждые 5 минут
+  workflow_dispatch:  # Ручной запуск
 
-# Токены (будут скрыты в Secrets)
-TELEGRAM_TOKEN = os.getenv('7993921779:AAGgRBsmxqelBqcpt9217cPDPcBrOprRibI')
-DIALOGFLOW_PROJECT_ID = os.getenv('newagent-hymr')
-
-bot = telebot.TeleBot(TELEGRAM_TOKEN)
-
-@bot.message_handler(func=lambda message: True)
-def handle_message(message):
-    # Отправляем сообщение в Dialogflow
-    session_client = dialogflow.SessionsClient()
-    session = session_client.session_path(DIALOGFLOW_PROJECT_ID, message.chat.id)
-    text_input = dialogflow.TextInput(text=message.text, language_code='ru')
-    query_input = dialogflow.QueryInput(text=text_input)
-    
-    response = session_client.detect_intent(
-        request={"session": session, "query_input": query_input}
-    )
-    
-    # Отправляем ответ пользователю
-    bot.reply_to(message, response.query_result.fulfillment_text)
-
-if __name__ == '__main__':
-    bot.polling()
+jobs:
+  run-bot:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Run bot
+        env:
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          DIALOGFLOW_PROJECT_ID: ${{ secrets.DIALOGFLOW_PROJECT_ID }}
+        run: python main.py
